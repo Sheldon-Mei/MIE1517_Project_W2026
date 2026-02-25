@@ -1,0 +1,27 @@
+model:
+    out_channels: 32
+    d_latent: 64 # Output frequency = d_latent * 4
+
+    num_processing_blocks_enc: 1
+    num_processing_blocks_dec: 1
+
+    tf_blocks_enc: 1
+    tf_blocks_dec: 1
+    d_model: 128
+    d_state: 32
+    expand: 2
+
+    fcn_dropout_enc: 0.0
+    fcn_dropout_dec: 0.0
+    pos_dropout: 0.0
+    ff_dropout: 0.0
+
+training:
+    optimizer: 
+        _target_: torch.nn.AdamW
+        weight_decay: 0.0001
+        betas: [0.9, 0.999]
+    learning_rate: 0.001
+    batch_size: 64
+    epochs: 50
+    device: "cpu"
