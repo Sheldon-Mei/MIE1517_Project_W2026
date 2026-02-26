@@ -33,7 +33,13 @@ class Decoder(nn.Module):
         self.film = FiLMLayer(d_model, frequency_dim)
 
         self.transformer_blocks = nn.ModuleList([
-            TransformerBlock(frequency_dim, d_state, expand, pos_dropout, ff_dropout) for _ in range(tf_blocks)
+            TransformerBlock(
+                frequency_dim, 
+                d_state, 
+                expand, 
+                pos_dropout, 
+                ff_dropout
+            ) for _ in range(tf_blocks)
         ])
 
     def forward(self, z, cond):

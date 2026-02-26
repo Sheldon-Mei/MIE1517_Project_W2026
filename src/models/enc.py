@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from .downsample import FullyConvolutionalEncoder
+from .downsample import DownsamplingStage
 from .transformer import TransformerBlock
 from .film import FiLMLayer
 
@@ -24,7 +24,7 @@ class Encoder(nn.Module):
         self.d_model = d_model
         
         # Convolution Downsampling
-        self.downsampling = FullyConvolutionalEncoder(
+        self.downsampling = DownsamplingStage(
             out_channels=out_channels,
             num_layers=fcn_layers,
             in_channels=in_channels,
@@ -37,11 +37,11 @@ class Encoder(nn.Module):
         # Transformer Block (Global/Local context and Dynamics)
         self.transformer_blocks = nn.ModuleList([
             TransformerBlock(
-                d_model = d_model,
-                d_state = d_state,
-                expand = expand,
-                pos_dropout = pos_dropout,
-                ff_dropout = ff_dropout
+                d_model,
+                d_state,
+                expand,
+                pos_dropout,
+                ff_dropout
             ) for _ in range(tf_blocks)
         ])
 

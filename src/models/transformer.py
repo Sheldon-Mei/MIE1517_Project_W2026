@@ -44,11 +44,7 @@ class TransformerBlock(nn.Module):
     def _init_weights(self, module):
         return
 
-    def forward(
-        self, 
-        x: torch.Tensor, 
-        residual_global: torch.Tensor=None,
-    ):
+    def forward(self, x: torch.Tensor):
         """
         Forward pass of the Mamba-Transformer block.
         
@@ -62,11 +58,6 @@ class TransformerBlock(nn.Module):
             h_prev (torch.Tensor, optional): The hidden state from the previous 
                 SSM step of shape [Batch, d_state, d_inner]. Required for 
                 recurrent/inference mode. Defaults to None.
-            residual_global (torch.Tensor, optional): External acoustic
-                features of shape [Batch, Frequency, Time]. If provided,
-                the Attention layer operates in 'Cross-Attention' mode, using 
-                this tensor as Key and Value to anchor the generation. 
-                Defaults to None (Self-Attention mode).
 
         Returns:
             tuple(torch.Tensor, torch.Tensor):

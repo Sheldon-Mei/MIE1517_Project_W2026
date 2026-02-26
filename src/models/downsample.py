@@ -4,7 +4,11 @@ import torch.nn as nn
 # Compression rate = 4
 
 class ProcessingBlock(nn.Module):
-    def __init__(self, channels, p_dropout=0.0):
+    def __init__(
+        self, 
+        channels: int, 
+        p_dropout: float = 0.0
+    ):
         super(ProcessingBlock, self).__init__()
 
         self.block = nn.Sequential(
@@ -12,8 +16,8 @@ class ProcessingBlock(nn.Module):
             nn.Conv2d(
                 channels,
                 channels,
-                kernel_size=(17, 17),
-                padding=(8, 8),
+                kernel_size=(7,7),
+                padding=(3,3),
                 groups=channels
             ),
             nn.BatchNorm2d(channels),
@@ -30,15 +34,15 @@ class ProcessingBlock(nn.Module):
     def forward(self, x):
         return self.block(x)
 
-class FullyConvolutionalEncoder(nn.Module):
+class DownsamplingStage(nn.Module):
     def __init__(
         self, 
         out_channels=32,
         num_layers=2,
         in_channels=1, 
-        p_dropout=0.0
+        p_dropout=0.0,
     ):
-        super(FullyConvolutionalEncoder, self).__init__()
+        super(DownsamplingStage, self).__init__()
         self.mid_channels = int(out_channels * 0.75)
         self.start_channels = max(4, self.mid_channels // 2)
 
@@ -58,9 +62,9 @@ class FullyConvolutionalEncoder(nn.Module):
                     nn.Conv2d(
                         in_ch,
                         out_ch,
-                        kernel_size=(31, 3),
+                        kernel_size=(15, 3),
                         stride=(2, 2),
-                        padding=(15, 1),
+                        padding=(7, 1),
                     )
                 )
             else:
@@ -69,9 +73,9 @@ class FullyConvolutionalEncoder(nn.Module):
                     nn.Conv2d(
                         in_ch,
                         out_ch,
-                        kernel_size=(3, 31),
+                        kernel_size=(3, 15),
                         stride=(2, 2),
-                        padding=(1, 15),
+                        padding=(1, 7),
                     )
                 )
 
@@ -88,9 +92,6 @@ class FullyConvolutionalEncoder(nn.Module):
 
     def forward(self, x):
         # input shape: [Batch, Frequency, Time]
-        
         x = x.unsqueeze(1) # [Batch, Channel, Frequency, Time]
-
         x = self.downsample_layers(x)
-
         return x

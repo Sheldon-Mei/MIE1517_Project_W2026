@@ -5,8 +5,6 @@ Generative cross-breed bird song by bird names.
 
 ## 📌 Overview
 
-Briefly describe:
-
 - The objective of this project is to train a neural network capable of generating bird song that simulate high-fidelity cross-breeds of different species.
 
 - We use a VAE UNet architecture with reconstruction and KL divergence loss. The system receives a conditioning input (i.e., bird name) and outputs a synthesized audio waveform representing the generated bird song.

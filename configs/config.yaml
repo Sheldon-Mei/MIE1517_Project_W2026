@@ -1,15 +1,17 @@
 model:
-    out_channels: 32
-    d_latent: 64 # Output frequency = d_latent * 4
+    out_channels: 16
+    d_latent: 32
 
     num_processing_blocks_enc: 1
     num_processing_blocks_dec: 1
 
     tf_blocks_enc: 1
     tf_blocks_dec: 1
-    d_model: 128
-    d_state: 32
+    d_model: 48
+    d_state: 16
     expand: 2
+
+    d_embedding: 32
 
     fcn_dropout_enc: 0.0
     fcn_dropout_dec: 0.0

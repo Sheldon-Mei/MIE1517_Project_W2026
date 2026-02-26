@@ -1,3 +1,5 @@
+import inspect
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,6 +7,8 @@ import torch.nn.functional as F
 from .enc import Encoder
 from .latent_head import LatentHead
 from .dec import Decoder
+
+from src.util.padding import pad_class_indices
 
 class EncoderDecoder(nn.Module):
     """
@@ -21,7 +25,6 @@ class EncoderDecoder(nn.Module):
         encoder (Encoder): The feature extraction and compression module.
         decoder (Decoder): The reconstruction and upsampling module.
     """
-
     def __init__(
         self, 
         frequency_dim: int = 256,
@@ -38,7 +41,8 @@ class EncoderDecoder(nn.Module):
         expand: int = 2,
         pos_dropout: float = 0.0,
         ff_dropout: float = 0.0,
-        d_latent: float = 32
+        d_latent: int = 32,
+        d_embedding: int = 16
     ):
         """
         Initializes the EncoderDecoder with specified structural hyperparameters.
@@ -61,12 +65,26 @@ class EncoderDecoder(nn.Module):
             d_latent: The bottleneck dimension of the latent representation.
         """
         super(EncoderDecoder, self).__init__()
+        frame = inspect.currentframe()
+        args, _, _, values = inspect.getargvalues(frame)
+        self._init_values = {k: values[k] for k in args if k != "self"}
 
+        self.n_classes = n_classes
+        self.d_latent = d_latent
+
+        # For handling the conditioning term
         self.c_embeddings = nn.Embedding(
-            num_embeddings=n_classes, 
-            embedding_dim=d_model
+            num_embeddings=n_classes+1, # +1 for padding index 0
+            embedding_dim=d_embedding,
+            padding_idx=0
+        )
+        self.c_projection = nn.Sequential(
+            nn.Linear(d_embedding*n_classes, d_embedding//4),
+            nn.ReLU(),
+            nn.Linear(d_embedding//4, d_model)
         )
 
+        # For the model
         self.encoder = Encoder(
             frequency_dim=frequency_dim,
             out_channels=out_channels,
@@ -80,7 +98,6 @@ class EncoderDecoder(nn.Module):
             ff_dropout=ff_dropout
         )
 
-        # Gaussian Latent distribution
         self.latent_head = LatentHead(d_model, d_latent)
 
         self.decoder = Decoder(
@@ -91,9 +108,9 @@ class EncoderDecoder(nn.Module):
             d_model=d_model,
             d_state=d_state,
             expand=expand,
-            tf_blocks=tf_blocks_dec,
             pos_dropout=pos_dropout,
             ff_dropout=ff_dropout,
+            tf_blocks=tf_blocks_dec,
             d_latent=d_latent
         )
 
@@ -112,13 +129,30 @@ class EncoderDecoder(nn.Module):
                 - "mu": The mean of the latent distribution.
                 - "std": The standard deviation of the latent distribution.
         """
+        c = pad_class_indices(c, self.n_classes)
         c = self.c_embeddings(c)
+        c = c.flatten()
+        c = self.c_projection(c)
+
         x = self.encoder(x, c)
         z, mu, std = self.latent_head(x) # [Batch, Time, Frequency]
         y = self.decoder(z, c)
+
         return {
             "reconstruction": y,
             "latent": z,
             "mu": mu,
             "std": std,
         }
+
+    @torch.no_grad()
+    def sample(self, c, freq_dim, time_dim):
+        z = torch.randn((1, freq_dim//4, time_dim//4), self.d_latent).to(c.device)
+
+        c = pad_class_indices(c, self.n_classes)
+        c = self.c_embeddings(c)
+        c = c.flatten()
+        c = self.c_projection(c)
+
+        out = self.decoder(z, c)
+        return out

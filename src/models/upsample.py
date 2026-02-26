@@ -9,39 +9,38 @@ class DepthRefinementBlock(nn.Module):
     def __init__(self, channels: int, p_dropout: float):
         super(DepthRefinementBlock, self).__init__()
 
+        # ---- Local Refinement (temporal + frequency) ----
         self.local_refine = nn.Sequential(
             nn.Conv2d(channels, channels, kernel_size=(3,1), padding=(1,0), groups=channels),
-            nn.Conv2d(channels, channels, kernel_size=(1,15), padding=(0,7), groups=channels),
+            nn.Conv2d(channels, channels, kernel_size=(1,3), padding=(0,1), groups=channels),
             nn.SiLU(),
             nn.Dropout2d(p_dropout),
 
-            nn.Conv2d(channels, channels, kernel_size=(15,1), padding=(7,0), groups=channels),
-            nn.Conv2d(channels, channels, kernel_size=(1,3), padding=(0,1), groups=channels),
+            nn.Conv2d(channels, channels, kernel_size=(5,1), padding=(2,0), groups=channels),
+            nn.Conv2d(channels, channels, kernel_size=(1,5), padding=(0,2), groups=channels),
             nn.SiLU(),
             nn.Dropout2d(p_dropout),
         )
 
-        # Pointwise/Depthwise
+        # ---- Quality / Feature Refinement (pointwise + channel mixing) ----
         self.quality_refine = nn.Sequential(
-            nn.Conv2d(channels, channels, kernel_size=(3, 31), padding=(1, 15), groups=channels),
-            nn.Conv2d(channels, channels, kernel_size=(31, 3), padding=(15, 1), groups=channels),
+            nn.Conv2d(channels, channels, kernel_size=(3,3), padding=(1,1), groups=channels),
+            nn.Conv2d(channels, channels, kernel_size=(3,3), padding=(1,1), groups=channels),
             nn.SiLU(),
             nn.Dropout2d(p_dropout),
 
-            nn.Conv2d(channels, channels * 4, kernel_size=1),
+            # Pointwise expansion
+            nn.Conv2d(channels, channels*2, kernel_size=1),
             nn.SiLU(),
             nn.Dropout2d(p_dropout),
-            
-            nn.Conv2d(channels * 4, channels, kernel_size=1),
+            nn.Conv2d(channels*2, channels, kernel_size=1),
             nn.SiLU(),
             nn.Dropout2d(p_dropout),
         )
 
     def forward(self, x):
-        # Local Dynamics (Temporal + Freq)
-        x = x + self.local_refine(x)
-        # Texture Refinement
-        x = x + self.quality_refine(x)
+        x = x + self.local_refine(x) # Local Dynamics (Temporal + Freq)
+        x = x + self.quality_refine(x) # Texture Refinement
         return x
 
 class ResolutionStage(nn.Module):
@@ -77,9 +76,9 @@ class ResolutionStage(nn.Module):
                     nn.ConvTranspose2d(
                         in_ch,
                         out_ch,
-                        kernel_size=(31, 3),
+                        kernel_size=(15, 3),
                         stride=(2, 2),
-                        padding=(15, 1),
+                        padding=(7, 1),
                         output_padding=(1, 1),
                     )
                 )
@@ -89,9 +88,9 @@ class ResolutionStage(nn.Module):
                     nn.ConvTranspose2d(
                         in_ch,
                         out_ch,
-                        kernel_size=(3, 31),
+                        kernel_size=(3, 15),
                         stride=(2, 2),
-                        padding=(1, 15),
+                        padding=(1, 7),
                         output_padding=(1, 1),
                     )
                 )

@@ -1,8 +1,6 @@
 import yaml
-
+import inspect
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 from src.models.encdec import EncoderDecoder
 
@@ -16,7 +14,7 @@ if __name__ == '__main__':
     n_classes = 5
 
     x = torch.randn((8, frequency, time))
-    c = torch.tensor([2])
+    c = torch.tensor([1,2,3])
 
     with open('configs/config.yaml', 'r') as file:
         config = yaml.safe_load(file)
@@ -27,10 +25,11 @@ if __name__ == '__main__':
         **config["model"]
     )
 
-    encdec.eval()
-    with torch.no_grad():
-        out = encdec(x, c)
+    out = encdec(x, c)
     print(out["reconstruction"].shape)
 
-    n_param = sum(p.numel() for p in encdec.parameters())
-    print(f"Number of parameters in model: {n_param}")
+    n_param_enc = sum(p.numel() for p in encdec.encoder.parameters() if p.requires_grad)
+    print(f"Number of parameters in encoder: {n_param_enc}")
+    n_param_dec = sum(p.numel() for p in encdec.decoder.parameters() if p.requires_grad)
+    print(f"Number of parameters in decoder: {n_param_dec}")
+    print(encdec._init_values)
