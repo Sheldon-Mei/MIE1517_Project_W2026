@@ -1,17 +1,17 @@
 # MIE1517_Project_W2026
-Team 10
+#Team 10
 
-Generative bird song 
+##Generative bird song 
 
-Generated sounds are in ./artifacts
+###Generated sounds are in ./artifacts
 
-compressed models are in ./checkpoints
-
-
+###compressed models are in ./checkpoints
 
 
 
-Web App:
+
+
+## Web App:
 ```bash
 python app.py
 ```
