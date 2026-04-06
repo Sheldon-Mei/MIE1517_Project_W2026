@@ -1,0 +1,10 @@
+torch
+librosa
+numpy
+scipy
+diffusers
+flask
+tqdm
+accelerate
+flask-socketio
+eventlet
