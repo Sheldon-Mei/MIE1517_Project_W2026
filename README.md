@@ -3,4 +3,5 @@ Team 10
 Generative bird song 
 
 Generated sounds are in ./artifacts
+
 compressed models are in ./checkpoints
