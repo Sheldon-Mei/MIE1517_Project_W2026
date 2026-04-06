@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BirdHybrid Diffusion Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary: #9b4dca;
+            --primary-glow: rgba(155, 77, 202, 0.5);
+            --bg-color: #0f111a;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-main: #f0f0f0;
+            --text-muted: #a0a0a0;
+        }
+        body {
+            background: linear-gradient(135deg, var(--bg-color) 0%, #171026 100%);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color-scheme: dark;
+            overflow-x: hidden;
+        }
+        body::before, body::after {
+            content: '';
+            position: absolute;
+            width: 50vw;
+            height: 50vw;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.15;
+            animation: float 20s infinite alternate linear;
+        }
+        body::before { background: #ff4d4d; top: -10vw; left: -10vw; }
+        body::after { background: #4d94ff; bottom: -10vw; right: -10vw; }
+        @keyframes float {
+            0%   { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 50px) scale(1.1); }
+        }
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 900px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3.5rem;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #e0e0e0, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+        p.subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            font-size: 1.4rem;
+        }
+        .species-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        .species-item {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 1rem 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .species-item:hover {
+            transform: translateX(5px);
+            box-shadow: -5px 5px 20px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .bird-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            margin-right: 2rem;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.5);
+        }
+        .slider-container { flex-grow: 1; }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .species-name {
+            font-weight: 600;
+            font-size: 1.4rem;
+        }
+        .species-weight {
+            font-family: monospace;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            color: #4CAF50;
+        }
+        /* Modern Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        button {
+            background: linear-gradient(135deg, var(--primary) 0%, #6e00ff 100%);
+            color: white;
+            border: none;
+            padding: 1.2rem 4rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px var(--primary-glow);
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px var(--primary-glow);
+        }
+        button:active { transform: translateY(1px); }
+        button:disabled {
+            background: #444;
+            box-shadow: none;
+            cursor: not-allowed;
+            color: #888;
+        }
+        audio {
+            width: 100%;
+            height: 40px;
+            border-radius: 20px;
+            outline: none;
+        }
+        audio::-webkit-media-controls-panel { background: rgba(255, 255, 255, 0.1); }
+        audio::-webkit-media-controls-current-time-display,
+        audio::-webkit-media-controls-time-remaining-display { color: white; }
+        .spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-content { display: flex; align-items: center; justify-content: center; }
+        
+        /* Progress Bar Styles */
+        .progress-container {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            height: 24px;
+            margin-top: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #81C784);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
+        }
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            z-index: 1;
+        }
+        .progress-info {
+            display: none;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hybrid Bird Generator</h1>
+        <p class="subtitle">UNet Diffusion Model &bull; Dynamic Latent Interpolation</p>
+        <div class="species-list" id="species-list"></div>
+        <div class="controls">
+            <button id="generate-btn" onclick="generateSound()">
+                <div class="btn-content">
+                    <div class="spinner" id="spinner"></div>
+                    <span id="btn-text">Generate Diffusion Mix</span>
+                </div>
+            </button>
+            
+            <div class="progress-container" id="progress-container">
+                <div class="progress-text" id="progress-text">0%</div>
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="progress-info" id="progress-info">
+                <span id="time-left">Estimating time...</span>
+                <span id="step-count">Step: 0/1000</span>
+            </div>
+
+            <div id="audio-container" style="display: none; width: 100%;">
+                <audio id="audio-player" controls></audio>
+            </div>
+        </div>
+    </div>
+    <script>
+        const speciesData = [
+            { id: "american-robin", name: "American Robin", img: "/static/img/american_robin_1775334666792.png", val: 50 },
+            { id: "bewicks-wren", name: "Bewick's Wren", img: "/static/img/bewicks_wren_1775334679235.png", val: 0 },
+            { id: "northern-cardinal", name: "Northern Cardinal", img: "/static/img/northern_cardinal_1775334690502.png", val: 50 },
+            { id: "northern-mockingbird", name: "Northern Mockingbird", img: "/static/img/northern_mockingbird_1775334703281.png", val: 0 },
+            { id: "song-sparrow", name: "Song Sparrow", img: "/static/img/song_sparrow_1775334715515.png", val: 0 }
+        ];
+
+        function normalizeWeights(changedIndex) {
+            let rawVals = speciesData.map(s => parseFloat(document.getElementById(`slider-${s.id}`).value));
+            let changedValue = rawVals[changedIndex];
+            let remainder = 100 - changedValue;
+            let otherSum = 0;
+            for(let i=0; i<rawVals.length; i++) {
+                if(i !== changedIndex) otherSum += rawVals[i];
+            }
+            for(let i=0; i<rawVals.length; i++) {
+                if(i !== changedIndex) {
+                    if (otherSum === 0) {
+                        rawVals[i] = remainder / (rawVals.length - 1);
+                    } else {
+                        rawVals[i] = (rawVals[i] / otherSum) * remainder;
+                    }
+                }
+            }
+            for(let i=0; i<rawVals.length; i++) {
+                let v = Math.round(rawVals[i]);
+                document.getElementById(`slider-${speciesData[i].id}`).value = v;
+                document.getElementById(`weight-${speciesData[i].id}`).innerText = (v/100).toFixed(2);
+                speciesData[i].val = v;
+            }
+        }
+
+        const listDiv = document.getElementById('species-list');
+        speciesData.forEach((species, i) => {
+            const item = document.createElement('div');
+            item.className = 'species-item';
+            item.innerHTML = `
+                <img src="${species.img}" class="bird-avatar" alt="${species.name}">
+                <div class="slider-container">
+                    <div class="slider-header">
+                        <span class="species-name">${species.name}</span>
+                        <span class="species-weight" id="weight-${species.id}">${(species.val/100).toFixed(2)}</span>
+                    </div>
+                    <input type="range" id="slider-${species.id}" min="0" max="100" value="${species.val}" oninput="normalizeWeights(${i})">
+                </div>
+            `;
+            listDiv.appendChild(item);
+        });
+
+        normalizeWeights(0);
+        
+        const socket = io();
+        let startTime = null;
+
+        socket.on('progress', (data) => {
+            const p = data.percentage;
+            const currentStep = data.current_step;
+            const totalSteps = data.total_steps;
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const timeLeftSpan = document.getElementById('time-left');
+            const stepCountSpan = document.getElementById('step-count');
+            
+            progressBar.style.width = p + '%';
+            progressText.innerText = p + '%';
+            stepCountSpan.innerText = `Step: ${currentStep}/${totalSteps}`;
+            
+            if (startTime && p > 0) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                const estimatedTotal = elapsed / (p / 100);
+                const remaining = Math.max(0, estimatedTotal - elapsed);
+                timeLeftSpan.innerText = `Time remaining: ${Math.round(remaining)}s`;
+            }
+        });
+
+        async function generateSound() {
+            const btn = document.getElementById('generate-btn');
+            const spinner = document.getElementById('spinner');
+            const btnText = document.getElementById('btn-text');
+            const audioContainer = document.getElementById('audio-container');
+            const audioPlayer = document.getElementById('audio-player');
+            const progressContainer = document.getElementById('progress-container');
+            const progressInfo = document.getElementById('progress-info');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const timeLeftSpan = document.getElementById('time-left');
+
+            const weights = {};
+            speciesData.forEach(s => { weights[s.name] = s.val / 100.0; });
+
+            btn.disabled = true;
+            spinner.style.display = 'block';
+            btnText.innerText = 'Initializing Diffusion...';
+            
+            audioContainer.style.display = 'none';
+            progressContainer.style.display = 'block';
+            progressInfo.style.display = 'flex';
+            progressBar.style.width = '0%';
+            progressText.innerText = '0%';
+            timeLeftSpan.innerText = 'Estimating time...';
+            
+            startTime = Date.now();
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ weights: weights })
+                });
+
+                if(response.ok) {
+                    const blob = await response.blob();
+                    const audioUrl = URL.createObjectURL(blob);
+                    audioPlayer.src = audioUrl;
+                    audioContainer.style.display = 'block';
+                    progressContainer.style.display = 'none';
+                    progressInfo.style.display = 'none';
+                    audioPlayer.play();
+                } else {
+                    alert('Error generating audio.');
+                }
+            } catch(e) {
+                alert('Connection error. Is the Flask app running?');
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.innerText = 'Generate Diffusion Mix';
+                startTime = null;
+            }
+        }
+    </script>
+</body>
+</html>
