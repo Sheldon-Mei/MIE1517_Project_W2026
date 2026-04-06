@@ -13,6 +13,6 @@
 
 ## Web App:
 ```bash
-python app.py
+python ./bird_webapp/app.py
 ```
 Visit **`http://localhost:5000`** in your browser.
