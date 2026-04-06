@@ -1,3 +1,6 @@
 # MIE1517_Project_W2026
+Team 10
+Generative bird song 
 
-Generative cross-breed bird song by bird names.
+Generated sounds are in ./artifacts
+compressed models are in ./checkpoints
